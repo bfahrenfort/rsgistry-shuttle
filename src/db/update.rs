@@ -2,8 +2,8 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 
 use super::types::*;
 use crate::auth::types::Claims;
-use crate::entry::{Entry, EntryWithID};
 use crate::state::MyState;
+use scaffold::{Entry, EntryWithID};
 
 // (UNAUTHORIZED) add Program to the database
 // Debug and unit test use only!

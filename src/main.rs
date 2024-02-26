@@ -1,6 +1,5 @@
 mod auth;
 mod db;
-mod entry;
 mod state;
 
 use axum::{routing::get, routing::post, Router};

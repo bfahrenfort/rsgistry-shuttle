@@ -6,8 +6,8 @@ use axum::{
 };
 
 use super::types::Queue;
-use crate::entry::EntryWithID;
 use crate::state::MyState;
+use scaffold::EntryWithID;
 
 pub async fn retrieve(
     Path(name): Path<String>,
