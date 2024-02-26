@@ -1,4 +1,4 @@
-# r[es]gistry
+# r/[es]/gistry
 
 Template codebase for creating registries of files/packages hosted for free on [shuttle.rs](https://shuttle.rs)
 
