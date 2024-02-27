@@ -1,4 +1,5 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use cute::c;
 
 use crate::auth::types::Claims;
 use crate::state::MyState;
@@ -29,11 +30,23 @@ pub async fn enqueue(
     State(state): State<MyState>,
     Json(data): Json<QueueNew>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let query = sqlx::query_as::<_, Queue>(
-        "INSERT INTO queue (program_name, doctype, url, request_type) \
-            VALUES ($1, $2, $3, $4) \
-            RETURNING id, program_name, doctype, url, request_type",
-    );
+    // Expanded example:
+    // INSERT INTO queue (program_name, doctype, url, request_type)
+    //     VALUES ($1, $2, $3, $4)
+    //     RETURNING (id, program_name, doctype, url, request_type)
+    let query_str = [
+        "INSERT INTO queue (",
+        QueueNew::list_fields(),
+        ") \
+            VALUES (",
+        &c![format!("${}", x + 1), for x in 0..(QueueNew::field_count())].concat(),
+        ") \
+            RETURNING ",
+        Queue::list_fields(),
+    ]
+    .concat();
+
+    let query = sqlx::query_as::<_, Queue>(&query_str);
     match data.bind(query).fetch_one(&state.pool).await {
         Ok(program) => Ok((StatusCode::CREATED, Json(program))),
         Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
