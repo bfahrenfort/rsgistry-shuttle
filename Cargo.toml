@@ -1,5 +1,5 @@
 [package]
-name = "rsgistry" # Change this to your project name
+name = "rsgistry-shuttle"
 version = "0.1.0"
 edition = "2021"
 
