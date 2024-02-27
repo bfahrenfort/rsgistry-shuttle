@@ -7,8 +7,9 @@ use rand::rngs::OsRng;
 use rand::RngCore;
 use std::time::SystemTime;
 
-use crate::db::types::{Admin, Queue};
+use crate::db::types::Admin;
 use crate::state::MyState;
+use scaffold::Queue;
 use types::*;
 
 pub static KEYS: Lazy<Keys> = Lazy::new(|| {

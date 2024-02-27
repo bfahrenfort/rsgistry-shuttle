@@ -1,4 +1,3 @@
-use crate::db::types::Queue;
 use axum::{
     async_trait,
     extract::FromRequestParts,
@@ -11,6 +10,7 @@ use axum_extra::{
     TypedHeader,
 };
 use jsonwebtoken::{decode, DecodingKey, EncodingKey, Validation};
+use scaffold::Queue;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 

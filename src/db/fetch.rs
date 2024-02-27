@@ -5,9 +5,8 @@ use axum::{
     Json,
 };
 
-use super::types::Queue;
 use crate::state::MyState;
-use scaffold::EntryWithID;
+use scaffold::{EntryWithID, Queue};
 
 pub async fn retrieve(
     Path(name): Path<String>,

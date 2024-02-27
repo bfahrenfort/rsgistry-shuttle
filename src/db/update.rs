@@ -1,9 +1,8 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 
-use super::types::*;
 use crate::auth::types::Claims;
 use crate::state::MyState;
-use scaffold::{Entry, EntryWithID};
+use scaffold::{Entry, EntryWithID, Queue, QueueNew};
 
 // (UNAUTHORIZED) add Program to the database
 // Debug and unit test use only!
@@ -30,18 +29,12 @@ pub async fn enqueue(
     State(state): State<MyState>,
     Json(data): Json<QueueNew>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    match sqlx::query_as::<_, QueueNew>(
+    let query = sqlx::query_as::<_, Queue>(
         "INSERT INTO queue (program_name, doctype, url, request_type) \
             VALUES ($1, $2, $3, $4) \
             RETURNING id, program_name, doctype, url, request_type",
-    )
-    .bind(&data.program_name)
-    .bind(&data.doctype)
-    .bind(&data.url)
-    .bind(&data.request_type)
-    .fetch_one(&state.pool)
-    .await
-    {
+    );
+    match data.bind(query).fetch_one(&state.pool).await {
         Ok(program) => Ok((StatusCode::CREATED, Json(program))),
         Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
     }
