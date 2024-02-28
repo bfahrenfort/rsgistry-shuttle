@@ -72,23 +72,30 @@ pub async fn auth_push(
     data: Claims,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     if data.payload.request_type == "create" {
-        match sqlx::query_as::<_, EntryWithID>(
-            "INSERT INTO entries (program_name, doctype, url) \
-            VALUES ($1, $2, $3) \
-            RETURNING id, program_name, doctype, url",
-        )
-        .bind(&data.payload.UNIQUE_name)
-        .bind(&data.payload.doctype)
-        .bind(&data.payload.url)
-        .fetch_one(&state.pool)
-        .await
+        let id = data.payload.id;
+        let shed_queue = Entry::from(data.payload);
+        let sql = [
+            "INSERT INTO entries (",
+            &Entry::list_fields().join(", "),
+            ") \
+            VALUES (",
+            &c![format!("${}", x + 1), for x in 0..(Entry::field_count())].concat(),
+            ") \
+            RETURNING ",
+            &EntryWithID::list_fields().join(", "),
+        ]
+        .concat();
+        match shed_queue
+            .bind(sqlx::query_as::<_, EntryWithID>(&sql))
+            .fetch_one(&state.pool)
+            .await
         {
             Ok(_) => match sqlx::query("DELETE FROM queue WHERE id=$1")
-                .bind(data.payload.id)
+                .bind(id)
                 .execute(&state.pool)
                 .await
             {
-                Ok(_) => Ok(Json(data.payload)),
+                Ok(_) => Ok(Json(shed_queue)),
                 Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
             },
             Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
