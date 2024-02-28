@@ -12,11 +12,22 @@ pub async fn push(
     State(state): State<MyState>,
     Json(data): Json<Entry>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let query = sqlx::query_as::<_, EntryWithID>(
-        "INSERT INTO programs (program_name, doctype, url) \
-            VALUES ($1, $2, $3) \
-            RETURNING id, program_name, doctype, url",
-    );
+    // Expanded example:
+    // INSERT INTO entries (program_name, doctype, url)
+    //     VALUES ($1, $2, $3)
+    //     RETURNING (program_name, doctype, url, id)
+    let sql = [
+        "INSERT INTO entries (",
+        &Entry::list_fields().join(", "),
+        ") \
+            VALUES (",
+        &c![format!("${}", x + 1), for x in 0..(Entry::field_count())].concat(),
+        ") \
+            RETURNING ",
+        &EntryWithID::list_fields().join(", "),
+    ]
+    .concat();
+    let query = sqlx::query_as::<_, EntryWithID>(&sql);
     match data.bind(query).fetch_one(&state.pool).await {
         Ok(program) => Ok((StatusCode::CREATED, Json(program))),
         Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
@@ -33,21 +44,24 @@ pub async fn enqueue(
     // Expanded example:
     // INSERT INTO queue (program_name, doctype, url, request_type)
     //     VALUES ($1, $2, $3, $4)
-    //     RETURNING (id, program_name, doctype, url, request_type)
-    let query_str = [
+    //     RETURNING id, program_name, doctype, url, request_type
+    let sql = [
         "INSERT INTO queue (",
-        QueueNew::list_fields(),
+        &QueueNew::list_fields().join(", "),
         ") \
             VALUES (",
         &c![format!("${}", x + 1), for x in 0..(QueueNew::field_count())].concat(),
         ") \
             RETURNING ",
-        Queue::list_fields(),
+        &Queue::list_fields().join(", "),
     ]
     .concat();
 
-    let query = sqlx::query_as::<_, Queue>(&query_str);
-    match data.bind(query).fetch_one(&state.pool).await {
+    match data
+        .bind(sqlx::query_as::<_, Queue>(&sql))
+        .fetch_one(&state.pool)
+        .await
+    {
         Ok(program) => Ok((StatusCode::CREATED, Json(program))),
         Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
     }
@@ -59,36 +73,14 @@ pub async fn auth_push(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     if data.payload.request_type == "create" {
         match sqlx::query_as::<_, EntryWithID>(
-            "INSERT INTO programs (program_name, doctype, url) \
+            "INSERT INTO entries (program_name, doctype, url) \
             VALUES ($1, $2, $3) \
             RETURNING id, program_name, doctype, url",
         )
-        .bind(&data.payload.program_name)
+        .bind(&data.payload.UNIQUE_name)
         .bind(&data.payload.doctype)
         .bind(&data.payload.url)
         .fetch_one(&state.pool)
-        .await
-        {
-            Ok(_) => match sqlx::query("DELETE FROM queue WHERE id=$1")
-                .bind(data.payload.id)
-                .execute(&state.pool)
-                .await
-            {
-                Ok(_) => Ok(Json(data.payload)),
-                Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
-            },
-            Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
-        }
-    } else if data.payload.request_type == "update" {
-        match sqlx::query(
-            "UPDATE programs \
-            SET doctype = $1, url = $2 \
-            WHERE program_name = $3", // TODO needs updating when move to multi-entry
-        )
-        .bind(&data.payload.doctype)
-        .bind(&data.payload.url)
-        .bind(&data.payload.program_name)
-        .execute(&state.pool)
         .await
         {
             Ok(_) => match sqlx::query("DELETE FROM queue WHERE id=$1")
