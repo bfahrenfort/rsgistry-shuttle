@@ -4,7 +4,7 @@ mod state;
 
 use aide::{
     axum::{
-        routing::{get, post},
+        routing::{get, get_with, post},
         ApiRouter, IntoApiResponse,
     },
     openapi::{Info, OpenApi},
@@ -17,8 +17,12 @@ use sqlx::PgPool;
 use state::MyState;
 
 async fn hello_world() -> &'static str {
-    "`glhf` API\n\
-        \tDocumentation @ https://github.com/bfahrenfort/shuttle-glhf"
+    "`rsgistry` API\n\
+        \tDocumentation at /api.json"
+}
+
+async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
+    Json(api)
 }
 
 #[shuttle_runtime::main]
@@ -34,6 +38,7 @@ async fn main(
         .await
         .map_err(CustomError::new)?;
 
+    // TODO parse Cargo.toml to get metadata
     let mut api = OpenApi {
         info: Info {
             title: "rsgistry".to_string(),
@@ -43,40 +48,44 @@ async fn main(
         ..OpenApi::default()
     };
 
-    async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
-        Json(api)
-    }
-
     let state = MyState { pool, secrets };
+    // TODO document routes
+    let router = ApiRouter::new()
+        .route("/api.json", get(serve_api))
+        .api_route(
+            "/",
+            get_with(hello_world, |o| {
+                o.id("index")
+                    .description("Returns a hello message")
+                    .response_with::<200, String, _>(|res| {
+                        res.description("A hello message")
+                            .example("`rsgistry` API\n\tDocumentation at /api.json")
+                    })
+            }),
+        )
+        .api_route("/api/v1/update", get(db::update::auth_push))
+        .api_route("/api/v1/queue/add", post(db::update::enqueue))
+        .api_route("/api/v1/queue/peek", get(db::fetch::queue_peek))
+        .api_route("/api/v1/queue/fetch", get(db::fetch::queue_fetch))
+        .api_route("/api/v1/fetch/:name", get(db::fetch::retrieve))
+        .api_route("/login", post(auth::login));
+
     #[cfg(debug_assertions)]
     {
-        let router = ApiRouter::new()
-            .route("/api.json", get(serve_api))
-            .route("/", get(hello_world))
-            .api_route("/api/v1/debug/update", post(db::update::push))
-            .api_route("/api/v1/update", get(db::update::auth_push))
-            .api_route("/api/v1/queue/add", post(db::update::enqueue))
-            .api_route("/api/v1/queue/peek", get(db::fetch::queue_peek))
-            .api_route("/api/v1/queue/fetch", get(db::fetch::queue_fetch))
-            .api_route("/api/v1/fetch/:name", get(db::fetch::retrieve))
-            .api_route("/login", post(auth::login))
-            .with_state(state);
-
-        Ok(router.finish_api(&mut api).layer(Extension(api)).into())
+        let router = router.api_route("/api/v1/debug/update", post(db::update::push));
+        Ok(router
+            .with_state(state)
+            .finish_api(&mut api)
+            .layer(Extension(api))
+            .into())
     }
 
     #[cfg(not(debug_assertions))]
     {
-        let router = ApiRouter::new()
-            .route("/", get(hello_world))
-            .api_route("/api/v1/update", get(db::update::auth_push))
-            .api_route("/api/v1/queue/add", post(db::update::enqueue))
-            .api_route("/api/v1/queue/peek", get(db::fetch::queue_peek))
-            .api_route("/api/v1/queue/fetch", get(db::fetch::queue_fetch))
-            .api_route("/api/v1/fetch/:name", get(db::fetch::retrieve))
-            .api_route("/login", post(auth::login))
-            .with_state(state);
-
-        Ok(router.finish_api(&mut api).layer(Extension(api)).into())
+        Ok(router
+            .with_state(state)
+            .finish_api(&mut api)
+            .layer(Extension(api))
+            .into())
     }
 }
