@@ -1,4 +1,5 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use aide::axum::IntoApiResponse;
+use axum::{extract::State, http::StatusCode, Json};
 use cute::c;
 
 use crate::auth::types::Claims;
@@ -11,7 +12,7 @@ use scaffold::{Entry, EntryWithID, Queue, QueueNew};
 pub async fn push(
     State(state): State<MyState>,
     Json(data): Json<Entry>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Result<impl IntoApiResponse, impl IntoApiResponse> {
     // Expanded example:
     // INSERT INTO entries (program_name, doctype, url)
     //     VALUES ($1, $2, $3)
@@ -40,7 +41,7 @@ pub async fn push(
 pub async fn enqueue(
     State(state): State<MyState>,
     Json(data): Json<QueueNew>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Result<impl IntoApiResponse, impl IntoApiResponse> {
     // Expanded example:
     // INSERT INTO queue (program_name, doctype, url, request_type)
     //     VALUES ($1, $2, $3, $4)
@@ -70,7 +71,7 @@ pub async fn enqueue(
 pub async fn auth_push(
     State(state): State<MyState>,
     data: Claims,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Result<impl IntoApiResponse, impl IntoApiResponse> {
     if data.payload.request_type == "create" {
         let id = data.payload.id;
         let shed_queue = Entry::from(data.payload);

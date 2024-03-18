@@ -1,3 +1,4 @@
+use aide::OperationIo;
 use axum::{
     async_trait,
     extract::FromRequestParts,
@@ -10,11 +11,12 @@ use axum_extra::{
     TypedHeader,
 };
 use jsonwebtoken::{decode, DecodingKey, EncodingKey, Validation};
-use scaffold::Queue;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::auth::KEYS;
+use scaffold::Queue;
 
 pub struct Keys {
     pub encoding: EncodingKey,
@@ -29,7 +31,7 @@ impl Keys {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, OperationIo)]
 pub struct Claims {
     pub payload: Queue,
     pub exp: usize,
@@ -56,7 +58,7 @@ where
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct AuthBody {
     pub access_token: String,
     pub token_type: String,
@@ -70,14 +72,14 @@ impl AuthBody {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, JsonSchema, Deserialize)]
 pub struct AuthPayload {
     pub client_id: String,
     pub client_secret: String,
     pub queue_id: Option<i32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, JsonSchema, OperationIo)]
 pub enum AuthError {
     WrongCredentials,
     MissingCredentials,

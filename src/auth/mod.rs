@@ -1,6 +1,7 @@
 pub mod types;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use aide::axum::IntoApiResponse;
+use axum::{extract::State, Json};
 use jsonwebtoken::{encode, Header};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
@@ -21,7 +22,7 @@ pub static KEYS: Lazy<Keys> = Lazy::new(|| {
 pub async fn login(
     State(state): State<MyState>,
     Json(payload): Json<AuthPayload>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Result<impl IntoApiResponse, impl IntoApiResponse> {
     if payload.client_id.is_empty() || payload.client_secret.is_empty() {
         return Err(AuthError::MissingCredentials);
     }
