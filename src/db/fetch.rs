@@ -12,7 +12,7 @@ pub async fn retrieve(
     Path(name): Path<String>,
     State(state): State<MyState>,
 ) -> Result<impl IntoApiResponse, impl IntoApiResponse> {
-    match sqlx::query_as::<_, EntryWithID>("SELECT * FROM entries WHERE program_name = $1")
+    match sqlx::query_as::<_, EntryWithID>("SELECT * FROM entries WHERE name = $1")
         .bind(name)
         .fetch_one(&state.pool)
         .await
