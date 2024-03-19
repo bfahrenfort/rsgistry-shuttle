@@ -17,17 +17,12 @@ pub async fn push(
     // INSERT INTO entries (program_name, doctype, url)
     //     VALUES ($1, $2, $3)
     //     RETURNING (program_name, doctype, url, id)
-    let sql = [
-        "INSERT INTO entries (",
+    let sql = format!(
+        "INSERT INTO entries ({}) VALUES ({}) RETURNING {}",
         &Entry::list_fields().join(", "),
-        ") \
-            VALUES (",
-        &c![format!("${}", x + 1), for x in 0..(Entry::field_count())].concat(),
-        ") \
-            RETURNING ",
+        &c![format!("${}", x + 1), for x in 0..(Entry::field_count())].join(", "),
         &EntryWithID::list_fields().join(", "),
-    ]
-    .concat();
+    );
     let query = sqlx::query_as::<_, EntryWithID>(&sql);
     match data.bind(query).fetch_one(&state.pool).await {
         Ok(program) => Ok((StatusCode::CREATED, Json(program))),
@@ -46,17 +41,12 @@ pub async fn enqueue(
     // INSERT INTO queue (program_name, doctype, url, request_type)
     //     VALUES ($1, $2, $3, $4)
     //     RETURNING id, program_name, doctype, url, request_type
-    let sql = [
-        "INSERT INTO queue (",
+    let sql = format!(
+        "INSERT INTO queue ({}) VALUES ({}) RETURNING {}",
         &QueueNew::list_fields().join(", "),
-        ") \
-            VALUES (",
-        &c![format!("${}", x + 1), for x in 0..(QueueNew::field_count())].concat(),
-        ") \
-            RETURNING ",
+        &c![format!("${}", x + 1), for x in 0..(QueueNew::field_count())].join(", "),
         &Queue::list_fields().join(", "),
-    ]
-    .concat();
+    );
 
     match data
         .bind(sqlx::query_as::<_, Queue>(&sql))
@@ -75,17 +65,13 @@ pub async fn auth_push(
     if data.payload.request_type == "create" {
         let id = data.payload.id;
         let shed_queue = Entry::from(data.payload);
-        let sql = [
-            "INSERT INTO entries (",
+        let sql = format!(
+            "INSERT INTO entries ({}) VALUES ({}) RETURNING {}",
             &Entry::list_fields().join(", "),
-            ") \
-            VALUES (",
-            &c![format!("${}", x + 1), for x in 0..(Entry::field_count())].concat(),
-            ") \
-            RETURNING ",
+            &c![format!("${}", x + 1), for x in 0..(Entry::field_count())].join(", "),
             &EntryWithID::list_fields().join(", "),
-        ]
-        .concat();
+        );
+
         match shed_queue
             .bind(sqlx::query_as::<_, EntryWithID>(&sql))
             .fetch_one(&state.pool)
