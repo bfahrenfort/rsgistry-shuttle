@@ -1,8 +1,9 @@
-DROP TABLE IF EXISTS programs;
+DROP TABLE IF EXISTS entries;
 
-CREATE TABLE IF NOT EXISTS programs (
+CREATE TABLE IF NOT EXISTS entries (
   id serial PRIMARY KEY,
-  program_name TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
   doctype TEXT NOT NULL,
-  url TEXT
+  url TEXT,
+  UNIQUE (name, doctype)
 );
