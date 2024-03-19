@@ -10,6 +10,8 @@ use aide::{
     openapi::{Info, OpenApi},
 };
 use axum::{Extension, Json};
+use cute::c;
+use scaffold::Entry;
 use shuttle_runtime::CustomError;
 use shuttle_secrets::{SecretStore, Secrets};
 use sqlx::PgPool;
@@ -49,6 +51,7 @@ async fn main(
     };
 
     let state = MyState { pool, secrets };
+    let keys = Entry::get_keys();
     // TODO document routes
     let router = ApiRouter::new()
         .route("/api.json", get(serve_api))
@@ -67,7 +70,14 @@ async fn main(
         .api_route("/api/v1/queue/add", post(db::update::enqueue))
         .api_route("/api/v1/queue/peek", get(db::fetch::queue_peek))
         .api_route("/api/v1/queue/fetch", get(db::fetch::queue_fetch))
-        .api_route("/api/v1/fetch/:name", get(db::fetch::retrieve))
+        .api_route(
+            &format!(
+                "/api/v1/fetch/{}",
+                // List comps look better than maps.
+                c![format!(":{}", keys[x]), for x in 0..keys.len()].join("/")
+            ),
+            get(db::fetch::retrieve),
+        )
         .api_route("/login", post(auth::login));
 
     #[cfg(debug_assertions)]

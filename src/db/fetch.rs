@@ -4,19 +4,24 @@ use axum::{
     http::StatusCode,
     Json,
 };
+use cute::c;
 
 use crate::state::MyState;
-use scaffold::{EntryWithID, Queue};
+use scaffold::{Entry, EntryKeyTuple, EntryWithID, Queue};
 
 pub async fn retrieve(
-    Path(name): Path<String>,
+    Path(key_tuple): Path<EntryKeyTuple>,
     State(state): State<MyState>,
 ) -> Result<impl IntoApiResponse, impl IntoApiResponse> {
-    match sqlx::query_as::<_, EntryWithID>("SELECT * FROM entries WHERE name = $1")
-        .bind(name)
-        .fetch_one(&state.pool)
-        .await
-    {
+    let keys = Entry::get_keys();
+    let sql = format!(
+        "SELECT * FROM entries WHERE {}",
+        c![format!("{} = ${}", keys[x], x + 1), for x in 0..keys.len()].join(" AND ")
+    );
+    let query = sqlx::query_as::<_, EntryWithID>(&sql);
+
+    let bound = Entry::fetch_bind(Entry::yeet_tuple(key_tuple), query); // So cursed
+    match bound.fetch_one(&state.pool).await {
         Ok(program) => Ok((StatusCode::OK, Json(program))),
         Err(e) => Err((StatusCode::NOT_FOUND, e.to_string())),
     }
