@@ -77,13 +77,13 @@ pub async fn auth_push(
             .fetch_one(&state.pool)
             .await
         {
-            Ok(_) => match sqlx::query("DELETE FROM queue WHERE id=$1")
+            Ok(ret) => match sqlx::query("DELETE FROM queue WHERE id=$1")
                 .bind(id)
                 .execute(&state.pool)
                 .await
             {
-                Ok(_) => Ok(Json(shed_queue)),
-                Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
+                Ok(_) => Ok(Json(ret)),
+                Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
             },
             Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
         }
