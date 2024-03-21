@@ -58,7 +58,7 @@ where
     }
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, JsonSchema, OperationIo)]
 pub struct AuthBody {
     pub access_token: String,
     pub token_type: String,
@@ -72,7 +72,7 @@ impl AuthBody {
     }
 }
 
-#[derive(Debug, JsonSchema, Deserialize)]
+#[derive(Debug, JsonSchema, Deserialize, OperationIo)]
 pub struct AuthPayload {
     pub client_id: String,
     pub client_secret: String,
