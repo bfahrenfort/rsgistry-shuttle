@@ -1,5 +1,5 @@
 use aide::OperationIo;
-use shuttle_secrets::SecretStore;
+use shuttle_runtime::SecretStore;
 use sqlx::PgPool;
 
 #[derive(Clone, OperationIo)]
