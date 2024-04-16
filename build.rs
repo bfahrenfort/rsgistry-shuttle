@@ -32,7 +32,7 @@ fn compile_fe() {
     cmd.args(["build", "-d", "../assets", "--filehash", "false"]);
 
     cmd.arg("--release");
-    cmd.arg("../leptos/index.html");
+    cmd.arg("../web/index.html");
     if let Err(e) = cmd.status() {
         panic!("Failed to compile frontend!\n{e}");
     }
