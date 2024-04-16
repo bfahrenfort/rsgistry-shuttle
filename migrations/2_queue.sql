@@ -2,5 +2,5 @@ DROP TABLE IF EXISTS queue;
 
 CREATE TABLE IF NOT EXISTS queue (
   id serial PRIMARY KEY,
-  name TEXT NOT NULL,
+  name TEXT NOT NULL
 );
