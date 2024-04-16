@@ -93,6 +93,8 @@ pub async fn auth_push(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+        // 3. try and perform 1+2, if one fails their effect will be rolled back
+        //   when transaction goes out of scope
         transaction
             .commit()
             .await
