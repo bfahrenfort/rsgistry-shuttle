@@ -72,22 +72,41 @@ pub async fn auth_push(
             &EntryWithID::list_fields().join(", "),
         );
 
-        match shed_queue
+        // Perform whole operation atomically
+        let transaction = state
+            .pool
+            .begin()
+            .await
+            .expect("Unable to begin transaction");
+
+        // 1. Insert the object designated from the queue into the entries table
+        let inserted = shed_queue
             .bind(sqlx::query_as::<_, EntryWithID>(&sql))
             .fetch_one(&state.pool)
             .await
-        {
-            Ok(ret) => match sqlx::query("DELETE FROM queue WHERE id=$1")
-                .bind(id)
-                .execute(&state.pool)
-                .await
-            {
-                Ok(_) => Ok(Json(ret)),
-                Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-            },
-            Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
-        }
+            .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+
+        // 2. Remove the queue entry as it's been performed
+        sqlx::query("DELETE FROM queue WHERE id=$1")
+            .bind(id)
+            .execute(&state.pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        transaction
+            .commit()
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        Ok(Json(inserted))
     } else {
-        Err((StatusCode::BAD_REQUEST, "haha".to_string()))
+        // TODO: implement amendments
+        Err((
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Unimplemented queue request type: {}",
+                data.payload.request_type
+            ),
+        ))
     }
 }
